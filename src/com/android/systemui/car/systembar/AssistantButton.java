@@ -21,9 +21,11 @@ import static android.service.voice.VoiceInteractionSession.SHOW_SOURCE_ASSIST_G
 import android.app.role.RoleManager;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.TypedArray;
 import android.os.Bundle;
 import android.os.RemoteException;
+import android.os.UserHandle;
 import android.util.AttributeSet;
 import android.util.Log;
 
@@ -88,9 +90,38 @@ public class AssistantButton extends CarSystemBarButton {
             SystemBarUtil.INSTANCE.showTosAcceptanceFlow(getContext(), getUserTracker());
             return;
         }
+        if (mAssistUtils.getActiveServiceComponentName() == null && launchAssistActivity()) {
+            return;
+        }
         final Bundle args = new Bundle();
         mAssistUtils.showSessionForActiveService(args,
                 SHOW_SOURCE_ASSIST_GESTURE, mShowCallback, /*activityToken=*/ null);
+    }
+
+    /**
+     * An assistant role holder that is only an ACTION_ASSIST activity (e.g. Dicio) has no
+     * VoiceInteractionService, so there is no session to show: start its assist activity instead,
+     * like the phone's assist gesture does.
+     *
+     * @return true if an assist activity was started
+     */
+    private boolean launchAssistActivity() {
+        final UserHandle user = getUserTracker() != null ? getUserTracker().getUserHandle()
+                : getContext().getUser();
+        final ComponentName assist = mAssistUtils.getAssistComponentForUser(user.getIdentifier());
+        if (assist == null) {
+            return false;
+        }
+        final Intent intent = new Intent(Intent.ACTION_ASSIST)
+                .setPackage(assist.getPackageName())
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        try {
+            getContext().startActivityAsUser(intent, user);
+            return true;
+        } catch (android.content.ActivityNotFoundException e) {
+            Log.w(TAG, "No ACTION_ASSIST activity in " + assist.getPackageName(), e);
+            return false;
+        }
     }
 
     /**
