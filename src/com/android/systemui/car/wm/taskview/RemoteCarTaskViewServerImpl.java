@@ -204,6 +204,13 @@ public class RemoteCarTaskViewServerImpl implements TaskViewBase {
             }
             mTaskViewTransitions.setTaskViewVisible(mTaskViewTaskController, /* visible= */
                     true, /* reorder= */ true);
+            // setTaskViewVisible() returns early when the TaskView state already says visible, and
+            // that state isn't updated by transitions the TaskView didn't start: a HOME intent
+            // delivered to the already-resumed launcher moves the home task in front of the
+            // embedded task, which is then hidden while the state still says visible, leaving the
+            // task view empty. Reorder explicitly (the same reorder setTaskViewVisible() would do);
+            // it's a no-op transition if the task is already on top.
+            mTaskViewTransitions.reorderTaskViewTask(mTaskViewTaskController, /* onTop= */ true);
         }
 
         @Override
