@@ -518,9 +518,15 @@ public class PanelTransitionCoordinator {
             }
             TaskPanel taskPanel = mPanelUtils.getTaskPanel(
                     tp -> tp.getRootTaskId() == change.getTaskInfo().taskId);
-            if (taskPanel == null || taskPanel.getLeash() == null) {
-                Log.e(TAG, "TaskPanel is null " + change.getTaskInfo() + ", or leash is null"
-                        + taskPanel);
+            if (taskPanel == null) {
+                // Not every task lives in a panel, e.g. a fullscreen app started from the app grid.
+                if (DEBUG) {
+                    Log.d(TAG, "No TaskPanel for task " + change.getTaskInfo().taskId);
+                }
+                continue;
+            }
+            if (taskPanel.getLeash() == null) {
+                Log.e(TAG, "Leash is null for " + taskPanel);
                 continue;
             }
 
